@@ -1,0 +1,118 @@
+﻿@* Views/Phones/Index.cshtml *@
+@using FirstJobs.Web.Startup
+@{
+    ViewBag.CurrentPageName = "Store";
+    ViewBag.Title = "Store Managers";
+    // Nếu dự án dùng /Views/Layout/_Layout.cshtml thì bỏ dòng Layout dưới hoặc chỉnh đúng:
+    // Layout = "~/Views/Layout/_Layout.cshtml";
+}
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-sm-12">
+                <h1 class="m-0 text-dark">Store Managers</h1>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="content">
+    <div class="container-fluid">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div><button id="btnCreate" class="btn btn-primary"><i class="fa fa-plus"></i> New Phone</button></div>
+                <div class="input-group" style="width:280px">
+                    <input id="keyword" class="form-control" placeholder="Search name/brand">
+                    <div class="input-group-append"><button id="btnSearch" class="btn btn-outline-secondary"><i class="fa fa-search"></i></button></div>
+                </div>
+            </div>
+            <div class="card-body">
+                <table id="phoneTable" class="table table-striped table-bordered w-100">
+                    <thead>
+                        <tr>
+                            <th>Image</th>
+                            <th>Name</th>
+                            <th>Brand</th>
+                            <th class="text-right">Price</th>
+                            <th class="text-right">Stock</th>
+                            <th style="width:120px;">Actions</th>
+                        </tr>
+                    </thead>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="phoneModalContainer"></div>
+
+@section scripts {
+    <script>
+        var svc = abp.services.app.phone; // proxy có sẵn từ /AbpServiceProxies
+
+            function openModal(model){
+          // nếu dùng Area App của ASP.NET Zero: đổi URL thành '/App/Phones/CreateOrEditModal'
+          $.get('/Phones/EditModal', function(html){
+            $('#phoneEditModal').remove();          // tránh trùng id
+            $('body').append(html);                 // gắn modal vào body
+            $('#PhoneId').val(model?.id||'');
+            $('#Name').val(model?.name||'');
+            $('#Brand').val(model?.brand||'');
+            $('#Price').val(model?.price||'');
+            $('#Stock').val(model?.stock||'');
+            $('#ImageUrl').val(model?.imageUrl||'');
+            $('#phoneEditModal').modal({backdrop:'static',keyboard:false}).modal('show');
+          });
+        }
+
+
+        function editRow(id){
+          svc.get({ id: id }).done(function(res){ openModal(res); });
+        }
+
+        function deleteRow(id){
+          abp.message.confirm('Delete this phone?', function(ok){
+            if(!ok) return;
+            svc.delete({ id:id }).done(function(){
+              $('#phoneTable').DataTable().ajax.reload(null,false);
+              abp.notify.success('Deleted');
+            });
+          });
+        }
+
+        $(function(){
+          var dt = $('#phoneTable').DataTable(abp.libs.datatables.normalizeConfiguration({
+            serverSide: true, processing: true, paging: true, searching: false,
+            ajax: function(data, cb){
+              var req = {
+                maxResultCount: data.length,
+                skipCount: data.start,
+                sorting: 'creationTime DESC',
+                keyword: $('#keyword').val() || ''
+              };
+              svc.getAll(req).done(function(res){
+                cb({ data: res.items, recordsTotal: res.totalCount, recordsFiltered: res.totalCount });
+              });
+            },
+            columnDefs: [
+              { data: 'imageUrl', render: d => d ? `<img src="${d}" style="width:40px;height:40px;object-fit:cover;border-radius:8px;">` : '-' },
+              { data: 'name' }, { data: 'brand' },
+              { data: 'price', className:'text-right', render: d => (d??0).toLocaleString() },
+              { data: 'stock', className:'text-right' },
+              { data: null, orderable:false, render: r => `
+                  <button class="btn btn-sm btn-secondary mr-1" onclick="editRow(${r.id})"><i class="fa fa-edit"></i></button>
+                  <button class="btn btn-sm btn-danger" onclick="deleteRow(${r.id})"><i class="fa fa-trash"></i></button>`
+              }
+            ]
+          }));
+
+          $('#btnSearch').on('click', function(){ dt.ajax.reload(); });
+          $('#btnCreate').on('click', function(){ openModal(null); });
+        });
+
+
+
+    </script>
+    <script src="/js/abp.dataTable.js"></script>
+
+}

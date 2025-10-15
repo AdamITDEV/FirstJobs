@@ -1,0 +1,91 @@
+﻿@{
+    ViewBag.Title = "Contacts";
+}
+@{
+    Layout = "~/Views/Shared/Layout/_Layout.cshtml";
+}
+<div class="content-header"><div class="container-fluid"><h1 class="m-0 text-dark">Contacts</h1></div></div>
+
+<div class="content">
+    <div class="container-fluid">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div><button id="btnCreate" class="btn btn-primary"><i class="fa fa-plus"></i> New</button></div>
+                <div class="input-group" style="width:280px">
+                    <input id="keyword" class="form-control" placeholder="Search name/phone">
+                    <div class="input-group-append"><button id="btnSearch" class="btn btn-outline-secondary"><i class="fa fa-search"></i></button></div>
+                </div>
+            </div>
+            <div class="card-body">
+                <table id="tbl" class="table table-striped table-bordered w-100">
+                    <thead><tr><th>Name</th><th>Phone</th><th style="width:120px;">Actions</th></tr></thead>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="modalHost"></div>
+
+@section scripts {
+    <script>
+        var svc = abp.services.app.contact;
+
+                   function openModal(m) {
+            $.get('/Contacts/EditModal', function(html) {
+                $('#modalHost').html(html); // Sử dụng modalHost thay vì append vào body
+
+                // Reset form và set values
+                $('#contactForm')[0].reset();
+                if (m) {
+                    $('#Id').val(m.id || '');
+                    $('#FullName').val(m.fullName || '');
+                    $('#PhoneNumber').val(m.phoneNumber || '');
+                } else {
+                    $('#Id').val('');
+                }
+
+                $('#contactEditModal').modal({backdrop:'static', keyboard:false}).modal('show');
+            });
+        }
+
+        // Sửa lại hàm editRow để đảm bảo data đúng
+        function editRow(id) {
+            svc.get({ id: id }).done(function(result) {
+                openModal(result);
+            });
+        }
+
+        function delRow(id){
+          abp.message.confirm('Delete this contact?', function(ok){
+            if(!ok) return;
+            svc.delete({ id }).done(function(){
+              $('#tbl').DataTable().ajax.reload(null,false);
+              abp.notify.success('Deleted');
+            });
+          });
+        }
+
+        $(function(){
+          var dt = $('#tbl').DataTable({
+            serverSide:true, processing:true, paging:true, searching:false, responsive:true,
+            ajax:function(d,cb){
+              var req={ maxResultCount:d.length, skipCount:d.start, sorting:'creationTime DESC', keyword:$('#keyword').val()||'' };
+              svc.getAll(req).done(function(res){
+                cb({ data: res.items, recordsTotal: res.totalCount, recordsFiltered: res.totalCount });
+              });
+            },
+            columns:[
+              { data:'fullName' },
+              { data:'phoneNumber' },
+              { data:null, orderable:false, render:r=>`
+                <button class="btn btn-sm btn-secondary mr-1" onclick="editRow(${r.id})"><i class="fa fa-edit"></i></button>
+                <button class="btn btn-sm btn-danger" onclick="delRow(${r.id})"><i class="fa fa-trash"></i></button>`}
+            ]
+          });
+
+          $('#btnSearch').on('click', function(){ dt.ajax.reload(); });
+          $('#btnCreate').on('click', function(){ openModal(null); });
+        });
+    </script>
+}
