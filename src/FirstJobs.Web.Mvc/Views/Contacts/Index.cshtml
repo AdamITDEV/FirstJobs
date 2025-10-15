@@ -33,44 +33,50 @@
 </div>
 
 @section scripts {
-    <!-- ABP proxies phải trước script của bạn -->
-    <script src="/AbpServiceProxies/GetAll" type="text/javascript"></script>
-    <script src="/AbpScripts/GetScripts" type="text/javascript"></script>
-
+    <script src="/AbpServiceProxies/GetAll"></script>
+    <script src="/AbpScripts/GetScripts"></script>
     <script>
         var svc = abp.services.app.contact;
+        var dt;
 
         function openModal(m){
-          $.get('@Url.Action("EditModal", "Contacts")')
-           .done(function(html){
-              $('#contactEditModal').remove();
-              $('body').append(html);
-              $('#Id').val(m?.id||'');
-              $('#FullName').val(m?.fullName||'');
-              $('#PhoneNumber').val(m?.phoneNumber||'');
-              $('#contactEditModal').modal({backdrop:'static',keyboard:false}).modal('show');
-           })
-           .fail(function(xhr){
-              abp.message.error('Load modal failed: ' + xhr.status + ' ' + xhr.statusText);
-              console.error('EditModal GET error', xhr);
-           });
+          $.get('@Url.Action("EditModal", "Contacts")').done(function(html){
+            $('#contactEditModal').remove();
+            $('body').append(html);
+            $('#Id').val(m?.id||'');
+            $('#FullName').val(m?.fullName||'');
+            $('#PhoneNumber').val(m?.phoneNumber||'');
+            $('#contactEditModal').modal({backdrop:'static',keyboard:false}).modal('show');
+          }).fail(function(xhr){
+            abp.message.error('Load modal failed: '+xhr.status+' '+xhr.statusText);
+          });
         }
 
-        function editRow(id){ svc.get({ id }).done(openModal); }
+        function editRow(id){ svc.get({ id:id }).done(openModal); }
 
+        // ✅ Sửa hàm xóa: dùng Promise, có busy + bắt lỗi rõ ràng
         function delRow(id){
-          abp.message.confirm('Delete this contact?', function(ok){
-            if(!ok) return;
-            svc.delete({ id }).done(function(){
-              $('#tbl').DataTable().ajax.reload(null,false);
-              abp.notify.success('Deleted');
-            });
+          abp.message.confirm('Delete this contact?', 'Confirm').then(function(isConfirmed){
+            if(!isConfirmed) return;
+
+            abp.ui.setBusy('#tbl');
+            svc.delete({ id:id })
+              .done(function(){
+                dt.ajax.reload(null,false);
+                abp.notify.success('Deleted');
+              })
+              .fail(function(xhr){
+                var msg = (xhr.responseJSON && xhr.responseJSON.error && xhr.responseJSON.error.message) || 'Delete failed';
+                abp.message.error(msg);
+                console.error('Delete failed', xhr);
+              })
+              .always(function(){ abp.ui.clearBusy('#tbl'); });
           });
         }
 
         $(function(){
-          var dt = $('#tbl').DataTable({
-            dom: 'lrtip',      // không dùng Buttons để tránh lỗi 'print'
+          dt = $('#tbl').DataTable({
+            dom:'lrtip',
             serverSide:true, processing:true, paging:true, searching:false, responsive:true,
             ajax:function(d,cb){
               var req={ maxResultCount:d.length, skipCount:d.start, sorting:'creationTime DESC', keyword:$('#keyword').val()||'' };
@@ -82,14 +88,16 @@
               { data:'fullName' },
               { data:'phoneNumber' },
               { data:null, orderable:false, render:function(r){
+                  // ✅ giữ inline onclick cho nhanh gọn
                   return '<button class="btn btn-sm btn-secondary mr-1" onclick="editRow('+r.id+')"><i class="fa fa-edit"></i></button>'
                        + '<button class="btn btn-sm btn-danger" onclick="delRow('+r.id+')"><i class="fa fa-trash"></i></button>';
-                }}
+                }
+              }
             ]
           });
 
           $(document).on('click', '#btnCreate', function(){ openModal(null); });
-          $(document).on('click', '#btnSearch', function(){ $('#tbl').DataTable().ajax.reload(); });
+          $(document).on('click', '#btnSearch', function(){ dt.ajax.reload(); });
         });
     </script>
 }
