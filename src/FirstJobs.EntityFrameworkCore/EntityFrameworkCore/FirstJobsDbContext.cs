@@ -9,6 +9,6 @@ using FirstJobs.Contacts;
 
 public class FirstJobsDbContext : Abp.Zero.EntityFrameworkCore.AbpZeroDbContext<Tenant, Role, User, FirstJobsDbContext>
 {
-    public DbSet<Contact> Contacts { get; set; }
+    public DbSet<Contact> Contacts { get; set; }   // <— thêm
     public FirstJobsDbContext(DbContextOptions<FirstJobsDbContext> options) : base(options) { }
 }

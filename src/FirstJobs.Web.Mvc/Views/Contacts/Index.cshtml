@@ -1,8 +1,11 @@
-﻿@{
-    ViewBag.Title = "Contacts";
-}
+﻿
 @{
+    ViewData["Title"] = "Index";
     Layout = "~/Views/Shared/Layout/_Layout.cshtml";
+}
+
+@{
+    ViewBag.Title = "Contacts";
 }
 <div class="content-header"><div class="container-fluid"><h1 class="m-0 text-dark">Contacts</h1></div></div>
 
@@ -31,30 +34,18 @@
     <script>
         var svc = abp.services.app.contact;
 
-                   function openModal(m) {
-            $.get('/Contacts/EditModal', function(html) {
-                $('#modalHost').html(html); // Sử dụng modalHost thay vì append vào body
-
-                // Reset form và set values
-                $('#contactForm')[0].reset();
-                if (m) {
-                    $('#Id').val(m.id || '');
-                    $('#FullName').val(m.fullName || '');
-                    $('#PhoneNumber').val(m.phoneNumber || '');
-                } else {
-                    $('#Id').val('');
-                }
-
-                $('#contactEditModal').modal({backdrop:'static', keyboard:false}).modal('show');
-            });
+        function openModal(m){
+          $.get('/Contacts/EditModal', function(html){
+            $('#contactEditModal').remove();
+            $('body').append(html);
+            $('#Id').val(m?.id||'');
+            $('#FullName').val(m?.fullName||'');
+            $('#PhoneNumber').val(m?.phoneNumber||'');
+            $('#contactEditModal').modal({backdrop:'static',keyboard:false}).modal('show');
+          });
         }
 
-        // Sửa lại hàm editRow để đảm bảo data đúng
-        function editRow(id) {
-            svc.get({ id: id }).done(function(result) {
-                openModal(result);
-            });
-        }
+        function editRow(id){ svc.get({ id }).done(openModal); }
 
         function delRow(id){
           abp.message.confirm('Delete this contact?', function(ok){

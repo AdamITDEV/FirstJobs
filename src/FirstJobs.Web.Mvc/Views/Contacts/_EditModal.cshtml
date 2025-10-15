@@ -1,0 +1,33 @@
+﻿@{
+    Layout = null;
+}
+<div class="modal fade" id="contactEditModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Contact</h5></div>
+            <div class="modal-body">
+                <input type="hidden" id="Id">
+                <div class="form-group"><label>Name</label><input id="FullName" class="form-control" maxlength="128" required></div>
+                <div class="form-group"><label>Phone</label><input id="PhoneNumber" class="form-control" maxlength="32" required></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button class="btn btn-primary" onclick="saveContact()">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function saveContact(){
+      var id = $('#Id').val();
+      var dto = { fullName: $('#FullName').val(), phoneNumber: $('#PhoneNumber').val() };
+      var req = id ? abp.services.app.contact.update(Object.assign({ id: parseInt(id) }, dto))
+                   : abp.services.app.contact.create(dto);
+      req.done(function(){
+        $('#contactEditModal').modal('hide');
+        $('#tbl').DataTable().ajax.reload(null,false);
+        abp.notify.success('Saved');
+      });
+    }
+</script>

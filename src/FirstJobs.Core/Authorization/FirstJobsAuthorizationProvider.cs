@@ -12,6 +12,7 @@ namespace FirstJobs.Authorization
             context.CreatePermission(PermissionNames.Pages_Users_Activation, L("UsersActivation"));
             context.CreatePermission(PermissionNames.Pages_Roles, L("Roles"));
             context.CreatePermission(PermissionNames.Pages_Tenants, L("Tenants"), multiTenancySides: MultiTenancySides.Host);
+            
             var contacts = context.CreatePermission(PermissionNames.Pages_Contacts, L("Contacts"));
             contacts.CreateChildPermission(PermissionNames.Pages_Contacts_Create, L("Create"));
             contacts.CreateChildPermission(PermissionNames.Pages_Contacts_Edit, L("Edit"));
