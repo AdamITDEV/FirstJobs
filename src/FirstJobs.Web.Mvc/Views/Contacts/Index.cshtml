@@ -1,22 +1,26 @@
-﻿
-@{
-    ViewData["Title"] = "Index";
+﻿@{
+    ViewData["Title"] = "Contacts";
     Layout = "~/Views/Shared/Layout/_Layout.cshtml";
 }
 
-@{
-    ViewBag.Title = "Contacts";
-}
-<div class="content-header"><div class="container-fluid"><h1 class="m-0 text-dark">Contacts</h1></div></div>
+<div class="content-header">
+    <div class="container-fluid">
+        <h1 class="m-0 text-dark">Contacts</h1>
+    </div>
+</div>
 
 <div class="content">
     <div class="container-fluid">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <div><button id="btnCreate" class="btn btn-primary"><i class="fa fa-plus"></i> New</button></div>
+                <div>
+                    <button id="btnCreate" class="btn btn-primary"><i class="fa fa-plus"></i> New</button>
+                </div>
                 <div class="input-group" style="width:280px">
                     <input id="keyword" class="form-control" placeholder="Search name/phone">
-                    <div class="input-group-append"><button id="btnSearch" class="btn btn-outline-secondary"><i class="fa fa-search"></i></button></div>
+                    <div class="input-group-append">
+                        <button id="btnSearch" class="btn btn-outline-secondary"><i class="fa fa-search"></i></button>
+                    </div>
                 </div>
             </div>
             <div class="card-body">
@@ -28,21 +32,28 @@
     </div>
 </div>
 
-<div id="modalHost"></div>
-
 @section scripts {
+    <!-- ABP proxies phải trước script của bạn -->
+    <script src="/AbpServiceProxies/GetAll" type="text/javascript"></script>
+    <script src="/AbpScripts/GetScripts" type="text/javascript"></script>
+
     <script>
         var svc = abp.services.app.contact;
 
         function openModal(m){
-          $.get('/Contacts/EditModal', function(html){
-            $('#contactEditModal').remove();
-            $('body').append(html);
-            $('#Id').val(m?.id||'');
-            $('#FullName').val(m?.fullName||'');
-            $('#PhoneNumber').val(m?.phoneNumber||'');
-            $('#contactEditModal').modal({backdrop:'static',keyboard:false}).modal('show');
-          });
+          $.get('@Url.Action("EditModal", "Contacts")')
+           .done(function(html){
+              $('#contactEditModal').remove();
+              $('body').append(html);
+              $('#Id').val(m?.id||'');
+              $('#FullName').val(m?.fullName||'');
+              $('#PhoneNumber').val(m?.phoneNumber||'');
+              $('#contactEditModal').modal({backdrop:'static',keyboard:false}).modal('show');
+           })
+           .fail(function(xhr){
+              abp.message.error('Load modal failed: ' + xhr.status + ' ' + xhr.statusText);
+              console.error('EditModal GET error', xhr);
+           });
         }
 
         function editRow(id){ svc.get({ id }).done(openModal); }
@@ -59,6 +70,7 @@
 
         $(function(){
           var dt = $('#tbl').DataTable({
+            dom: 'lrtip',      // không dùng Buttons để tránh lỗi 'print'
             serverSide:true, processing:true, paging:true, searching:false, responsive:true,
             ajax:function(d,cb){
               var req={ maxResultCount:d.length, skipCount:d.start, sorting:'creationTime DESC', keyword:$('#keyword').val()||'' };
@@ -69,14 +81,15 @@
             columns:[
               { data:'fullName' },
               { data:'phoneNumber' },
-              { data:null, orderable:false, render:r=>`
-                <button class="btn btn-sm btn-secondary mr-1" onclick="editRow(${r.id})"><i class="fa fa-edit"></i></button>
-                <button class="btn btn-sm btn-danger" onclick="delRow(${r.id})"><i class="fa fa-trash"></i></button>`}
+              { data:null, orderable:false, render:function(r){
+                  return '<button class="btn btn-sm btn-secondary mr-1" onclick="editRow('+r.id+')"><i class="fa fa-edit"></i></button>'
+                       + '<button class="btn btn-sm btn-danger" onclick="delRow('+r.id+')"><i class="fa fa-trash"></i></button>';
+                }}
             ]
           });
 
-          $('#btnSearch').on('click', function(){ dt.ajax.reload(); });
-          $('#btnCreate').on('click', function(){ openModal(null); });
+          $(document).on('click', '#btnCreate', function(){ openModal(null); });
+          $(document).on('click', '#btnSearch', function(){ $('#tbl').DataTable().ajax.reload(); });
         });
     </script>
 }
